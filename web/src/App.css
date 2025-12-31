@@ -80,11 +80,23 @@
   line-height: 1.4;
 }
 
+.loan-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .loan-amount {
   font-size: 0.95rem;
   font-weight: 400;
   color: #333;
-  flex-shrink: 0;
+}
+
+.payment-status {
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
