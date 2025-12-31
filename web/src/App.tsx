@@ -3,165 +3,196 @@ import { useState } from 'react';
 import './App.css'
 
 const GET_LOANS_WITH_PAYMENTS = gql`
-  query GetLoans {
-    loans {
-      id
-      name
-      interestRate
-      principal
-      dueDate
-      payments {
+    query GetLoans {
+        loans {
         id
-        loanId
-        paymentDate
-      }
+        name
+        interestRate
+        principal
+        dueDate
+        payments {
+            id
+            loanId
+            paymentDate
+        }
+        }
     }
-  }
 `;
 
 const CREATE_LOAN_PAYMENT = gql`
-  mutation CreateLoanPayment($input: CreateLoanPaymentInput!) {
-    createLoanPayment(input: $input) {
-      payment {
-        id
-        loanId
-        paymentDate
-      }
+    mutation CreateLoanPayment($input: CreateLoanPaymentInput!) {
+        createLoanPayment(input: $input) {
+        payment {
+            id
+            loanId
+            paymentDate
+        }
+        }
     }
-  }
 `;
 
 interface LoanPayment {
-  id?: number | null;
-  loanId?: number | null;
-  paymentDate?: string | null;
+    id?: number | null;
+    loanId?: number | null;
+    paymentDate?: string | null;
 }
 
 interface Loan {
-  id?: number | null;
-  name?: string | null;
-  interestRate?: number | null;
-  principal?: number | null;
-  dueDate?: string | null;
-  payments?: Array<LoanPayment | null> | null;
+    id: number;
+    name: string;
+    principal: number;
+    interestRate: number;
+    dueDate: string;
+    payments: LoanPayment[];
 }
 
-interface CategorizedPayment {
-  id?: number | null;
-  name?: string | null;
-  interestRate?: number | null;
-  principal?: number | null;
-  dueDate?: string | null;
-  paymentDate?: string | null;
-  status: 'On Time' | 'Late' | 'Defaulted' | 'Unpaid';
+interface CategorizedLoan {
+    id: number;
+    name: string;
+    interestRate: number;
+    principal: number;
+    dueDate: string;
+    paymentDate: string | null;
+    status: PaymentStatus;
 }
-
+  
 type PaymentStatus = 'On Time' | 'Late' | 'Defaulted' | 'Unpaid';
 
 /**
- * Categorizes loan payments based on the due date and payment date.
- * Returns an array where each loan is combined with its payment information and status.
+ * Calculates the difference in days between two dates (midnight-normalized).
  */
-function categorizeLoanPayments(loans: Array<Loan | null>): CategorizedPayment[] {
-  return loans
-    .filter((loan): loan is Loan => loan !== null)
-    .map((loan) => {
-      // Find the most recent payment for this loan
-      const payments = loan.payments?.filter((p): p is LoanPayment => p !== null) || [];
-      const latestPayment = payments.length > 0 
-        ? payments.reduce((latest, current) => {
-            if (!current.paymentDate) return latest;
-            if (!latest?.paymentDate) return current;
-            return new Date(current.paymentDate) > new Date(latest.paymentDate) ? current : latest;
-          })
-        : null;
+function getDaysDifference(date1: Date, date2: Date): number {
+    const normalizedDate1 = new Date(date1);
+    const normalizedDate2 = new Date(date2);
+    
+    normalizedDate1.setHours(0, 0, 0, 0);
+    normalizedDate2.setHours(0, 0, 0, 0);
+    
+    const diffTime = normalizedDate1.getTime() - normalizedDate2.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
 
-      const paymentDate = latestPayment?.paymentDate || null;
-      const dueDate = loan.dueDate;
 
-      let status: PaymentStatus;
+/**
+ * Determines payment status based on payment date and due date.
+ */
+function determinePaymentStatus(paymentDate: string | null, dueDate: string ): PaymentStatus {
+    // No payment made
+    if (!paymentDate) {
+        return 'Unpaid';
+    }
+  
+    // No due date - cannot determine proper status
+    if (!dueDate) {
+        return 'On Time';
+    }
+  
+    const daysOverdue = getDaysDifference(new Date(paymentDate), new Date(dueDate));
+  
+    // Payment before due date
+    if (daysOverdue <= 5) {
+        return 'On Time';
+    }
 
-      if (!paymentDate) {
-        status = 'Unpaid';
-      } else if (!dueDate) {
-        // If no due date, can't determine status, default to Unpaid
-        status = 'Unpaid';
-      } else {
-        // Calculate the difference in days between payment date and due date
-        const dueDateObj = new Date(dueDate);
-        const paymentDateObj = new Date(paymentDate);
-        
-        // Set time to midnight to compare dates only
-        dueDateObj.setHours(0, 0, 0, 0);
-        paymentDateObj.setHours(0, 0, 0, 0);
-        
-        const diffTime = paymentDateObj.getTime() - dueDateObj.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (daysOverdue <= 30) {
+        return 'Late';
+    }
+  
+    return 'Defaulted';
+}
 
-        if (diffDays <= 5 && diffDays >= 0) {
-          status = 'On Time';
-        } else if (diffDays > 5 && diffDays <= 30) {
-          status = 'Late';
-        } else if (diffDays > 30) {
-          status = 'Defaulted';
-        } else {
-          // Payment made before due date is considered "On Time"
-          status = 'On Time';
-        }
-      }
-
-      return {
-        id: loan.id,
-        name: loan.name,
-        interestRate: loan.interestRate,
-        principal: loan.principal,
-        dueDate: loan.dueDate,
-        paymentDate: paymentDate,
-        status: status
-      };
+/**
+ * Finds the most recent payment for a loan.
+ */
+function getLatestPayment(payments: Array<LoanPayment | null>): LoanPayment | null {
+    const validPayments = payments.filter(
+        (p): p is LoanPayment => p !== null && p.paymentDate !== null
+    );
+    
+    if (validPayments.length === 0) return null;
+    
+    return validPayments.reduce((latest, current) => {
+        return new Date(current.paymentDate!) > new Date(latest.paymentDate!) 
+            ? current 
+            : latest;
     });
 }
 
+/**
+ * Categorizes loans based on the due date and payment date.
+ * Returns an array where each loan is combined with its payment information and status.
+ * 
+ * @param loans - Array of loans to categorize
+ * @returns Array of categorized loans with status information
+ */
+function categorizeLoans(loans: Array<Loan | null>): CategorizedLoan[] {
+    return loans
+        .filter((loan): loan is Loan => {
+            return loan !== null && 
+                typeof loan.id === 'number' &&
+                typeof loan.name === 'string' &&
+                loan.dueDate !== null &&
+                loan.dueDate !== undefined;
+        })
+        .map((loan): CategorizedLoan => {
+            const latestPayment = getLatestPayment(loan.payments || []);
+            const paymentDate = latestPayment?.paymentDate ?? null;
+            
+            const status = determinePaymentStatus(paymentDate, loan.dueDate);
+    
+            return {
+                id: loan.id!,
+                name: loan.name!,
+                interestRate: loan.interestRate ?? 0,
+                principal: loan.principal ?? 0,
+                dueDate: loan.dueDate!,
+                paymentDate,
+                status,
+            };
+        });
+}
+  
+
 interface LoanCardProps {
-  payment: CategorizedPayment;
+    loan: CategorizedLoan;
 }
 
 const getStatusColor = (status: PaymentStatus): string => {
-  switch (status) {
-    case 'On Time':
-      return '#4caf50'; // GREEN
-    case 'Late':
-      return '#ff9800'; // ORANGE
-    case 'Defaulted':
-      return '#f44336'; // RED
-    case 'Unpaid':
-      return '#9e9e9e'; // GREY
-    default:
-      return '#9e9e9e';
-  }
+    switch (status) {
+        case 'On Time':
+            return '#4caf50'; // GREEN
+        case 'Late':
+            return '#ff9800'; // ORANGE
+        case 'Defaulted':
+            return '#f44336'; // RED
+        case 'Unpaid':
+            return '#9e9e9e'; // GREY
+        default:
+            return '#9e9e9e'; // GREY
+    }
 };
 
-const LoanCard = ({ payment }: LoanCardProps) => {
-  const statusColor = getStatusColor(payment.status);
+const LoanCard = ({ loan }: LoanCardProps) => {
+  const statusColor = getStatusColor(loan.status);
 
   return (
     <li className="loan-item">
       <div className="loan-item-content">
         <div className="loan-item-header">
           <div className="loan-avatar">
-            {payment.name?.[0]?.toUpperCase() || 'L'}
+            {loan.id}
           </div>
           <div className="loan-info">
-            <h3 className="loan-name">{payment.name}</h3>
+            <h3 className="loan-name">{loan.name}</h3>
             <p className="loan-details">
-              {payment.interestRate}% interest • Due {payment.dueDate}
-              {payment.paymentDate && ` • Paid ${payment.paymentDate}`}
+              {loan.interestRate}% interest • Due {loan.dueDate}
+              {loan.paymentDate && ` • Paid ${loan.paymentDate}`}
             </p>
           </div>
         </div>
         <div className="loan-item-right">
           <div className="loan-amount">
-            ${payment.principal?.toLocaleString() || '0'}
+            ${loan.principal?.toLocaleString() || '0'}
           </div>
           <div 
             className="payment-status" 
@@ -171,7 +202,7 @@ const LoanCard = ({ payment }: LoanCardProps) => {
               fontSize: '0.9rem'
             }}
           >
-            {payment.status}
+            {loan.status}
           </div>
         </div>
       </div>
@@ -280,15 +311,15 @@ function App() {
     if (error) return <p>Error: {error.message}</p>;
 
     const loans = data?.loans || [];
-    const categorizedPayments = categorizeLoanPayments(loans);
+    const CategorizedLoans = categorizeLoans(loans);
 
     return (
         <>
             <div className="app-container">
                 <h1>Existing Loans & Payments</h1>
                 <ul className="loans-list">
-                    {categorizedPayments.map((payment) => {
-                        return <LoanCard key={payment.id} payment={payment} />;
+                    {CategorizedLoans.map((loan) => {
+                        return <LoanCard key={loan.id} loan={loan} />;
                     })}
                 </ul>
 

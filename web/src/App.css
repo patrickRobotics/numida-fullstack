@@ -98,7 +98,6 @@
   font-weight: 600;
   font-size: 0.9rem;
 }
-
 .add-payment-form-container {
   margin-top: 2rem;
 }
@@ -117,7 +116,7 @@
 }
 
 .form-field label {
-  color: #555555;
+  color: #565656;
   font-size: 0.95rem;
   font-weight: 400;
   min-width: 120px;
@@ -127,7 +126,7 @@
 .form-field input {
   flex: 1;
   background-color: #fff;
-  color: #555555;
+  color: #565656;
   border: none;
   border-radius: 8px;
   padding: 0.875rem 1rem;
@@ -142,7 +141,7 @@
 
 .form-field input:focus {
   outline: 2px solid #646cff;
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .form-field input:disabled {
