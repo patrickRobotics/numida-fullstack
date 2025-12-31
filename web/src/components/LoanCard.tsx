@@ -3,6 +3,7 @@ import { CategorizedLoan, PaymentStatus } from '../types/loan';
 
 interface LoanCardProps {
     loan: CategorizedLoan;
+    onPaymentAdded?: () => void;
 }
 
 const getStatusColor = (status: PaymentStatus): string => {
@@ -20,7 +21,7 @@ const getStatusColor = (status: PaymentStatus): string => {
     }
 };
 
-export const LoanCard = ({ loan }: LoanCardProps) => {
+export const LoanCard = ({ loan, onPaymentAdded }: LoanCardProps) => {
   const statusColor = getStatusColor(loan.status);
 
   return (
@@ -52,9 +53,10 @@ export const LoanCard = ({ loan }: LoanCardProps) => {
           >
             {loan.status}
           </div>
-          {loan.status === 'Unpaid' && <AddPaymentForm loanId={loan.id} />}
+          {loan.status === 'Unpaid' && <AddPaymentForm loanId={loan.id} onSuccess={onPaymentAdded} />}
         </div>
       </div>
     </li>
   );
 };
+

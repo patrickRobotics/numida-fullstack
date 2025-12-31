@@ -1,11 +1,14 @@
 import datetime
-from flask import Flask
+from flask import Flask, request, jsonify
+from werkzeug.exceptions import BadRequest
 from flask_graphql import GraphQLView
 from flask_cors import CORS
 import graphene
 
+
 app = Flask(__name__)
-CORS(app)
+# Allow CORS for all routes and origins (for development)
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
 
 loans = [
     {
@@ -150,6 +153,63 @@ schema = graphene.Schema(query=Query, mutation=Mutation)
 app.add_url_rule(
     "/graphql", view_func=GraphQLView.as_view("graphql", schema=schema, graphiql=True)
 )
+
+
+@app.route("/loan-payments", methods=["POST"])
+def create_loan_payment():
+    """Create a new loan payment via REST API"""
+    try:
+        try:
+            data = request.get_json()
+        except BadRequest:
+            return jsonify({"error": "Request body must be JSON"}), 400
+        
+        # Validations - check if JSON parsing failed (returns None) or if it's an empty dict
+        if data is None:
+            return jsonify({"error": "Request body must be JSON"}), 400
+        
+        if "loan_id" not in data:
+            return jsonify({"error": "loan_id is required"}), 400
+        
+        if "payment_date" not in data:
+            return jsonify({"error": "payment_date is required"}), 400
+        
+        loan_id = data["loan_id"]
+        payment_date_str = data["payment_date"]
+        
+        try:
+            loan_id = int(loan_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": "loan_id must be an integer"}), 400
+        
+        # ValidCheckate if loan exists
+        if not any(loan.get("id") == loan_id for loan in loans):
+            return jsonify({"error": f"Loan with id {loan_id} not found"}), 404
+        
+        # Parse payment_date
+        try:
+            payment_date = datetime.datetime.strptime(payment_date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return jsonify({"error": "payment_date must be in YYYY-MM-DD format"}), 400
+        
+        new_id = max([payment.get("id") for payment in loan_payments], default=0) + 1
+        
+        new_payment = {
+            "id": new_id,
+            "loan_id": loan_id,
+            "payment_date": payment_date,
+        }
+        loan_payments.append(new_payment)
+        
+        # Return the created payment
+        return jsonify({
+            "id": new_payment["id"],
+            "loan_id": new_payment["loan_id"],
+            "payment_date": new_payment["payment_date"].isoformat(),
+        }), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/")

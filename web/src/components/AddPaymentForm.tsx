@@ -1,35 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useMutation } from '@apollo/client';
-import { GET_LOANS_WITH_PAYMENTS, CREATE_LOAN_PAYMENT } from '../graphql/queries';
+import { createLoanPayment } from '../api/loanPaymentApi';
 
 interface AddPaymentFormProps {
     loanId: number;
+    onSuccess?: () => void;
 }
 
-export const AddPaymentForm = ({ loanId }: AddPaymentFormProps) => {
+export const AddPaymentForm = ({ loanId, onSuccess }: AddPaymentFormProps) => {
     const [paymentDate, setPaymentDate] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const [createLoanPayment, { loading }] = useMutation(CREATE_LOAN_PAYMENT, {
-        refetchQueries: [{ query: GET_LOANS_WITH_PAYMENTS }],
-        onCompleted: () => {
-            setSuccess(true);
-            setError(null);
-            setPaymentDate('');
-            setTimeout(() => {
-                setSuccess(false);
-                setShowModal(false);
-            }, 2000);
-        },
-        onError: (err) => {
-            setError(err.message);
-            setSuccess(false);
-        }
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(false);
@@ -39,14 +23,33 @@ export const AddPaymentForm = ({ loanId }: AddPaymentFormProps) => {
             return;
         }
 
-        createLoanPayment({
-            variables: {
-                input: {
-                    loanId: loanId,
-                    paymentDate: paymentDate
-                }
+        setLoading(true);
+
+        try {
+            await createLoanPayment({
+                loan_id: loanId,
+                payment_date: paymentDate
+            });
+
+            setSuccess(true);
+            setError(null);
+            setPaymentDate('');
+            
+            // Call onSuccess callback if provided (for refetching data)
+            if (onSuccess) {
+                onSuccess();
             }
-        });
+
+            setTimeout(() => {
+                setSuccess(false);
+                setShowModal(false);
+            }, 2000);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
+            setSuccess(false);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleClose = () => {
@@ -150,3 +153,4 @@ export const AddPaymentForm = ({ loanId }: AddPaymentFormProps) => {
         </>
     );
 };
+
