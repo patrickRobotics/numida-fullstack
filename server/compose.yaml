@@ -6,3 +6,10 @@ services:
       context: .
     ports:
       - 2024:5000
+
+  test:
+    build:
+      context: .
+    command: python -m unittest test_app.py -v
+    profiles:
+      - test

@@ -54,3 +54,17 @@ To get all existing loans:
   "message": "Welcome to the Numida API"
 }
 ```
+
+
+## Running Tests
+
+To run unit tests for the GraphQL API:
+
+```bash
+docker compose --profile test run --rm test
+```
+
+This will:
+1. Build the Docker image (if not already built)
+2. Run all unit tests using Python's built-in unittest module
+3. Display test results and exit
