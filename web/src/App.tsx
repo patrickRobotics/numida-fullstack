@@ -1,5 +1,5 @@
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css'
 
 const GET_LOANS_WITH_PAYMENTS = gql`
@@ -157,6 +157,155 @@ interface LoanCardProps {
     loan: CategorizedLoan;
 }
 
+interface AddPaymentFormProps {
+    loanId: number;
+}
+
+const AddPaymentForm = ({ loanId }: AddPaymentFormProps) => {
+    const [paymentDate, setPaymentDate] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+
+    const [createLoanPayment, { loading }] = useMutation(CREATE_LOAN_PAYMENT, {
+        refetchQueries: [{ query: GET_LOANS_WITH_PAYMENTS }],
+        onCompleted: () => {
+            setSuccess(true);
+            setError(null);
+            setPaymentDate('');
+            setTimeout(() => {
+                setSuccess(false);
+                setShowModal(false);
+            }, 2000);
+        },
+        onError: (err) => {
+            setError(err.message);
+            setSuccess(false);
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setSuccess(false);
+
+        if (!paymentDate) {
+            setError('Please enter a payment date');
+            return;
+        }
+
+        createLoanPayment({
+            variables: {
+                input: {
+                    loanId: loanId,
+                    paymentDate: paymentDate
+                }
+            }
+        });
+    };
+
+    const handleClose = () => {
+        if (!loading) {
+            setShowModal(false);
+            setError(null);
+            setPaymentDate('');
+        }
+    };
+
+    const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) {
+            handleClose();
+        }
+    };
+
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && showModal && !loading) {
+                handleClose();
+            }
+        };
+
+        if (showModal) {
+            document.addEventListener('keydown', handleEscape);
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleEscape);
+            document.body.style.overflow = 'unset';
+        };
+    }, [showModal, loading]);
+
+    return (
+        <>
+            <button 
+                type="button"
+                className="add-payment-button"
+                onClick={() => setShowModal(true)}
+            >
+                Add Payment
+            </button>
+
+            {showModal && (
+                <div className="modal-overlay" onClick={handleBackdropClick}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2>Add Payment for loan {loanId}</h2>
+                            <button 
+                                type="button"
+                                className="modal-close-button"
+                                onClick={handleClose}
+                                disabled={loading}
+                                aria-label="Close"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <form className="modal-form" onSubmit={handleSubmit}>
+                            <div className="form-field">
+                                <label htmlFor={`payment-date-${loanId}`}>Payment Date</label>
+                                <input
+                                    id={`payment-date-${loanId}`}
+                                    name="payment-date"
+                                    type="date"
+                                    value={paymentDate}
+                                    onChange={(e) => setPaymentDate(e.target.value)}
+                                    disabled={loading}
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="form-message form-error">
+                                    {error}
+                                </div>
+                            )}
+                            {success && (
+                                <div className="form-message form-success">
+                                    Payment added successfully!
+                                </div>
+                            )}
+
+                            <div className="modal-actions">
+                                <button 
+                                    type="button" 
+                                    className="cancel-button"
+                                    onClick={handleClose}
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                                <button type="submit" className="submit-button" disabled={loading}>
+                                    {loading ? 'Adding...' : 'Add Payment'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+};
+
 const getStatusColor = (status: PaymentStatus): string => {
     switch (status) {
         case 'On Time':
@@ -204,105 +353,13 @@ const LoanCard = ({ loan }: LoanCardProps) => {
           >
             {loan.status}
           </div>
+          {loan.status === 'Unpaid' && <AddPaymentForm loanId={loan.id} />}
         </div>
       </div>
     </li>
   );
 };
 
-const AddNewPayment = () => {
-    const [loanId, setLoanId] = useState('');
-    const [paymentDate, setPaymentDate] = useState('');
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
-
-    const [createLoanPayment, { loading }] = useMutation(CREATE_LOAN_PAYMENT, {
-        refetchQueries: [{ query: GET_LOANS_WITH_PAYMENTS }],
-        onCompleted: () => {
-            setSuccess(true);
-            setError(null);
-            setLoanId('');
-            setPaymentDate('');
-            setTimeout(() => setSuccess(false), 3000);
-        },
-        onError: (err) => {
-            setError(err.message);
-            setSuccess(false);
-        }
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setSuccess(false);
-
-        if (!loanId || !paymentDate) {
-            setError('Please fill in all fields');
-            return;
-        }
-
-        const loanIdNum = parseInt(loanId, 10);
-        if (isNaN(loanIdNum)) {
-            setError('Loan ID must be a valid number');
-            return;
-        }
-
-        createLoanPayment({
-            variables: {
-                input: {
-                    loanId: loanIdNum,
-                    paymentDate: paymentDate
-                }
-            }
-        });
-    };
-
-    return (
-        <div className="add-payment-form-container">
-            <form className="add-payment-form" onSubmit={handleSubmit}>
-                <div className="form-field">
-                    <label htmlFor="loan-id">Loan ID</label>
-                    <input
-                        id="loan-id"
-                        name="loan-id"
-                        type="number"
-                        value={loanId}
-                        onChange={(e) => setLoanId(e.target.value)}
-                        disabled={loading}
-                        placeholder=""
-                    />
-                </div>
-
-                <div className="form-field">
-                    <label htmlFor="payment-date">Payment Date</label>
-                    <input
-                        id="payment-date"
-                        name="payment-date"
-                        type="date"
-                        value={paymentDate}
-                        onChange={(e) => setPaymentDate(e.target.value)}
-                        disabled={loading}
-                    />
-                </div>
-
-                {error && (
-                    <div className="form-message form-error">
-                        {error}
-                    </div>
-                )}
-                {success && (
-                    <div className="form-message form-success">
-                        Payment added successfully!
-                    </div>
-                )}
-
-                <button type="submit" className="submit-button" disabled={loading}>
-                    {loading ? 'Adding...' : 'Add Payment'}
-                </button>
-            </form>
-        </div>
-    )
-}
 
 function App() {
     const { loading, error, data } = useQuery<{ loans?: Array<Loan | null> | null }>(GET_LOANS_WITH_PAYMENTS);
@@ -322,9 +379,6 @@ function App() {
                         return <LoanCard key={loan.id} loan={loan} />;
                     })}
                 </ul>
-
-                <h1>Add New Payment</h1>
-                <AddNewPayment />
             </div>
         </>
     )
