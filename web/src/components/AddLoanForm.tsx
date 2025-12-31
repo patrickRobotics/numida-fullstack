@@ -45,6 +45,17 @@ export const AddLoanForm = ({}: AddLoanFormProps) => {
             return;
         }
 
+        // Validate due date is in the future
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selectedDate = new Date(dueDate);
+        selectedDate.setHours(0, 0, 0, 0);
+
+        if (selectedDate <= today) {
+            setError('Due date must be in the future');
+            return;
+        }
+
         const principalNum = parseFloat(principal);
         const rateNum = parseFloat(interestRate);
 
@@ -160,7 +171,7 @@ export const AddLoanForm = ({}: AddLoanFormProps) => {
                                     disabled={loading}
                                     placeholder="Enter principal amount"
                                     min="0"
-                                    step="0.01"
+                                    step="1"
                                 />
                             </div>
 
@@ -186,8 +197,14 @@ export const AddLoanForm = ({}: AddLoanFormProps) => {
                                     name="loan-due-date"
                                     type="date"
                                     value={dueDate}
-                                    onChange={(e) => setDueDate(e.target.value)}
+                                    onChange={(e) => {
+                                        setDueDate(e.target.value);
+                                        if (error && error.includes('Due date')) {
+                                            setError(null); // clear error if user makes changes
+                                        }
+                                    }}
                                     disabled={loading}
+                                    min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                                 />
                             </div>
 
