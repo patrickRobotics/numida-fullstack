@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
+interface LoanCalculatorProps {
+    principal: number;
+    rate: number;
+    months: number;
+}
 
-// SECTION 4 Debugging & Code Refactoring
-export const LoanCalculator = ({ principal, rate, months }) => {
-    const [interest, setInterest] = useState(0)
+export const LoanCalculator = ({ principal, rate, months }: LoanCalculatorProps) => {
+    if (!principal || !rate || months <= 0) {
+        return null;
+    }
 
-    useEffect(() => {
-        setInterest((principal * rate * months) / 100)
-    }, [])
+    const interest = (principal * rate * months) / 100;
 
     return (
-        <div>
-            <h3>Loan Interest: {interest}</h3>
+        <div className="loan-calculator">
+            <h3>Calculated Interest: KES {interest.toFixed(2)}</h3>
+            <p className="calculator-details">
+                Based on {months} month{months !== 1 ? 's' : ''} at {rate}% monthly rate
+            </p>
         </div>
-    )
+    );
 }
