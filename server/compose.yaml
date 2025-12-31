@@ -1,0 +1,8 @@
+name: numida
+
+services:
+  server:
+    build:
+      context: .
+    ports:
+      - 2024:5000
