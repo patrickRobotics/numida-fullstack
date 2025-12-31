@@ -1,4 +1,18 @@
 /**
+ * Calculates the difference in days between two dates (midnight-normalized).
+ */
+export function getDaysDifference(date1: Date, date2: Date): number {
+    const normalizedDate1 = new Date(date1);
+    const normalizedDate2 = new Date(date2);
+    
+    normalizedDate1.setHours(0, 0, 0, 0);
+    normalizedDate2.setHours(0, 0, 0, 0);
+    
+    const diffTime = normalizedDate1.getTime() - normalizedDate2.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
  * Calculates the number of months between today and the due date
  */
 export function calculateMonthsUntilDue(dueDate: string): number {
