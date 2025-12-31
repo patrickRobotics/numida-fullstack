@@ -45,18 +45,75 @@ loan_payments = [
 ]
 
 
+class LoanPayment(graphene.ObjectType):
+    id = graphene.Int()
+    loan_id = graphene.Int()
+    payment_date = graphene.Date()
+
+
 class ExistingLoans(graphene.ObjectType):
     id = graphene.Int()
     name = graphene.String()
     interest_rate = graphene.Float()
     principal = graphene.Int()
+    due_date = graphene.Date()
+    payments = graphene.List(LoanPayment)
+
+    def resolve_payments(self, info):
+        if isinstance(self, dict):
+            loan_id = self.get("id")
+        else:
+            loan_id = getattr(self, "id", None)
+        return [payment for payment in loan_payments if payment.get("loan_id") == loan_id]
+
+
+class CreateLoanInput(graphene.InputObjectType):
+    name = graphene.String(required=True)
+    interest_rate = graphene.Float(required=True)
+    principal = graphene.Int(required=True)
+    due_date = graphene.Date(required=True)
+
+
+class CreateLoanPaymentInput(graphene.InputObjectType):
+    loan_id = graphene.Int(required=True)
+    payment_date = graphene.Date(required=True)
+
+
+class CreateLoan(graphene.Mutation):
+    class Arguments:
+        input = CreateLoanInput(required=True)
+
+    loan = graphene.Field(ExistingLoans)
+
+    def mutate(self, info, input):
+        # Generate new ID
+        new_id = max([loan.get("id") for loan in loans], default=0) + 1
+        
+        new_loan = {
+            "id": new_id,
+            "name": input.name,
+            "interest_rate": input.interest_rate,
+            "principal": input.principal,
+            "due_date": input.due_date,
+        }
+        loans.append(new_loan)
+        return CreateLoan(loan=new_loan)
 
 
 class Query(graphene.ObjectType):
     loans = graphene.List(ExistingLoans)
+    loan = graphene.Field(ExistingLoans, id=graphene.Int(required=True))
+    loan_payments = graphene.List(LoanPayment)
 
     def resolve_loans(self, info):
         return loans
+
+    def resolve_loan(self, info, id):
+        loan = next((loan for loan in loans if loan.get("id") == id), None)
+        return loan
+
+    def resolve_loan_payments(self, info):
+        return loan_payments
 
 
 schema = graphene.Schema(query=Query)
