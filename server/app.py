@@ -100,6 +100,34 @@ class CreateLoan(graphene.Mutation):
         return CreateLoan(loan=new_loan)
 
 
+class CreateLoanPayment(graphene.Mutation):
+    class Arguments:
+        input = CreateLoanPaymentInput(required=True)
+
+    payment = graphene.Field(LoanPayment)
+
+    def mutate(self, info, input):
+        # Validate that loan exists
+        if not any(loan.get("id") == input.loan_id for loan in loans):
+            raise Exception(f"Loan with id {input.loan_id} not found")
+        
+        # Generate new ID
+        new_id = max([payment.get("id") for payment in loan_payments], default=0) + 1
+        
+        new_payment = {
+            "id": new_id,
+            "loan_id": input.loan_id,
+            "payment_date": input.payment_date,
+        }
+        loan_payments.append(new_payment)
+        return CreateLoanPayment(payment=new_payment)
+
+
+class Mutation(graphene.ObjectType):
+    create_loan = CreateLoan.Field()
+    create_loan_payment = CreateLoanPayment.Field()
+
+
 class Query(graphene.ObjectType):
     loans = graphene.List(ExistingLoans)
     loan = graphene.Field(ExistingLoans, id=graphene.Int(required=True))
@@ -116,7 +144,7 @@ class Query(graphene.ObjectType):
         return loan_payments
 
 
-schema = graphene.Schema(query=Query)
+schema = graphene.Schema(query=Query, mutation=Mutation)
 
 
 app.add_url_rule(
