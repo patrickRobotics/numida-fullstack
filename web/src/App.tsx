@@ -227,9 +227,9 @@ const AddNewPayment = () => {
     };
 
     return (
-        <div>
-            <form onSubmit={handleSubmit}>
-                <p>
+        <div className="add-payment-form-container">
+            <form className="add-payment-form" onSubmit={handleSubmit}>
+                <div className="form-field">
                     <label htmlFor="loan-id">Loan ID</label>
                     <input
                         id="loan-id"
@@ -238,10 +238,11 @@ const AddNewPayment = () => {
                         value={loanId}
                         onChange={(e) => setLoanId(e.target.value)}
                         disabled={loading}
+                        placeholder=""
                     />
-                </p>
+                </div>
 
-                <p>
+                <div className="form-field">
                     <label htmlFor="payment-date">Payment Date</label>
                     <input
                         id="payment-date"
@@ -251,22 +252,22 @@ const AddNewPayment = () => {
                         onChange={(e) => setPaymentDate(e.target.value)}
                         disabled={loading}
                     />
-                </p>
+                </div>
+
                 {error && (
-                    <p style={{ color: 'red', marginTop: '0.5rem' }}>
+                    <div className="form-message form-error">
                         {error}
-                    </p>
+                    </div>
                 )}
                 {success && (
-                    <p style={{ color: 'green', marginTop: '0.5rem' }}>
+                    <div className="form-message form-success">
                         Payment added successfully!
-                    </p>
+                    </div>
                 )}
-                <p>
-                    <button type="submit" disabled={loading}>
-                        {loading ? 'Adding...' : 'Add Payment'}
-                    </button>
-                </p>
+
+                <button type="submit" className="submit-button" disabled={loading}>
+                    {loading ? 'Adding...' : 'Add Payment'}
+                </button>
             </form>
         </div>
     )

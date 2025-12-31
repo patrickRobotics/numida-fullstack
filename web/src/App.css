@@ -99,6 +99,107 @@
   font-size: 0.9rem;
 }
 
+.add-payment-form-container {
+  margin-top: 2rem;
+}
+
+.add-payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 500px;
+}
+
+.form-field {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.form-field label {
+  color: #555555;
+  font-size: 0.95rem;
+  font-weight: 400;
+  min-width: 120px;
+  text-align: left;
+}
+
+.form-field input {
+  flex: 1;
+  background-color: #fff;
+  color: #555555;
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  font-weight: 400;
+  min-width: 200px;
+}
+
+.form-field input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-field input:focus {
+  outline: 2px solid #646cff;
+  outline-offset: 1px;
+}
+
+.form-field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-field input[type="date"] {
+  color-scheme: dark;
+}
+
+.form-field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.form-message {
+  margin-top: -0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.form-error {
+  color: #f44336;
+}
+
+.form-success {
+  color: #4caf50;
+}
+
+.submit-button {
+  background-color: #424242;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-start;
+  min-width: 150px;
+  transition: background-color 0.2s;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #525252;
+}
+
+.submit-button:active:not(:disabled) {
+  background-color: #383838;
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
   .loan-item-content {
     flex-direction: column;
@@ -108,5 +209,24 @@
 
   .loan-amount {
     align-self: flex-end;
+  }
+
+  .form-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .form-field label {
+    min-width: auto;
+  }
+
+  .form-field input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .submit-button {
+    width: 100%;
   }
 }
